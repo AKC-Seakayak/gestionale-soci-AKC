@@ -265,14 +265,21 @@
     }
     
     // ---------------------- CARICA SOCI ----------------------
-    async function caricaSoci() {
-        const snapshot = await getDocs(sociCol);
-        tuttiSoci = [];
-        snapshot.forEach(docSnap => {
-            tuttiSoci.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        filtraERenderizza();
-    }
+    // Assicurati di avere importato orderBy all'inizio del modulo (già presente)
+import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// ... poi la funzione modificata:
+
+async function caricaSoci() {
+    // Crea una query ordinata per cognome (crescente) e poi per nome
+    const q = query(sociCol, orderBy("cognome"), orderBy("nome"));
+    const snapshot = await getDocs(q);
+    tuttiSoci = [];
+    snapshot.forEach(docSnap => {
+        tuttiSoci.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    filtraERenderizza();
+}
     
     function filtraERenderizza() {
         const searchTerm = searchInput.value.toLowerCase().trim();
