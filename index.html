@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Gestionale Soci AKC Como</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SheetJS per Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { background: #f4f7fc; font-family: 'Segoe UI', system-ui; }
+        .logo-container { display: flex; justify-content: center; margin: 20px 0; }
+        .logo { width: 180px; height: auto; }
+        .navbar-custom { background: white; border-radius: 30px; padding: 10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .table-container { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.03); }
+        .btn-moderno { border-radius: 40px; padding: 5px 18px; }
+        footer { text-align: center; margin-top: 30px; color: #6c757d; }
+        @media print {
+            .no-print { display: none; }
+            .table-container { box-shadow: none; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="container my-3">
+    <div class="logo-container">
+        <img src="logo-AKC.png" alt="Logo AKC Como" class="logo" onerror="this.src='https://via.placeholder.com/180x180?text=LOGO+AKC'">
+    </div>
+    
+    <!-- Login -->
+    <div id="loginDiv" class="card mx-auto" style="max-width: 400px;">
+        <div class="card-body">
+            <h4 class="card-title text-center">Accesso autorizzati</h4>
+            <input type="email" id="loginEmail" class="form-control mb-2" placeholder="Email">
+            <input type="password" id="loginPassword" class="form-control mb-2" placeholder="Password">
+            <button id="loginBtn" class="btn btn-primary w-100">Accedi</button>
+        </div>
+    </div>
+    
+    <!-- App principale -->
+    <div id="appDiv" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Gestione Soci AKC Como</h3>
+            <div><span id="statusSpan" class="badge bg-secondary me-2"></span><button id="logoutBtn" class="btn btn-outline-danger btn-sm">Logout</button></div>
+        </div>
+        
+        <!-- Menu -->
+        <div class="navbar-custom d-flex flex-wrap justify-content-between align-items-center mb-4">
+            <div class="btn-group flex-wrap" role="group">
+                <button id="nuovoSocioBtn" class="btn btn-outline-primary btn-moderno">➕ Nuova scheda</button>
+                <button id="aggiungiCampoBtn" class="btn btn-outline-secondary btn-moderno">➕ Aggiungi campo</button>
+                <button id="gestisciCampiBtn" class="btn btn-outline-info btn-moderno">📋 Gestisci campi</button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-success btn-moderno dropdown-toggle" data-bs-toggle="dropdown">📎 Esporta</button>
+                    <ul class="dropdown-menu">
+                        <li><button id="exportCsvBtn" class="dropdown-item">CSV</button></li>
+                        <li><button id="exportExcelBtn" class="dropdown-item">Excel</button></li>
+                    </ul>
+                </div>
+                <button id="stampaElencoBtn" class="btn btn-outline-dark btn-moderno">🖨 Stampa elenco</button>
+            </div>
+            <input type="text" id="searchInput" class="form-control w-auto mt-2 mt-sm-0" placeholder="Cerca in tutti i campi..." style="min-width: 200px;">
+        </div>
+        
+        <!-- Tabella soci -->
+        <div class="table-container">
+            <table class="table table-hover" id="sociTable">
+                <thead id="sociTableHead">
+                    <tr>
+                        <th>Azioni</th>
+                        <th>Anno rinnovo</th>
+                        <th>Cognome</th>
+                        <th>Nome</th>
+                        <th>Luogo/Data nascita</th>
+                        <th>Codice fiscale</th>
+                        <th>Residenza</th>
+                        <th>Email</th>
+                        <th>Telefono</th>
+                        <th>Deposito</th>
+                        <th>Quota versata</th>
+                        <th>Materiale consegna</th>
+                    </tr>
+                </thead>
+                <tbody id="sociTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Modale Socio -->
+    <div class="modal fade" id="socioModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 id="modalTitle">Nuovo Socio</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="socioForm">
+                        <input type="hidden" id="socioId">
+                        <div id="campiFissi">
+                            <div class="row">
+                                <div class="col-md-6 mb-2"><label>Anno rinnovo</label><input type="number" id="annoIscrizione" class="form-control"></div>
+                                <div class="col-md-6 mb-2"><label>Cognome *</label><input type="text" id="cognome" class="form-control" required></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2"><label>Nome *</label><input type="text" id="nome" class="form-control" required></div>
+                                <div class="col-md-6 mb-2"><label>Luogo nascita</label><input type="text" id="luogoNascita" class="form-control"></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2"><label>Data nascita</label><input type="date" id="dataNascita" class="form-control"></div>
+                                <div class="col-md-6 mb-2"><label>Codice fiscale</label><input type="text" id="codiceFiscale" class="form-control"></div>
+                            </div>
+                            <div class="mb-2"><label>Residenza</label><input type="text" id="residenza" class="form-control"></div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2"><label>Email</label><input type="email" id="email" class="form-control"></div>
+                                <div class="col-md-6 mb-2"><label>Telefono</label><input type="text" id="telefono" class="form-control"></div>
+                            </div>
+                            <div class="form-check mb-2"><input type="checkbox" id="deposito" class="form-check-input"><label class="form-check-label">Deposito versato</label></div>
+                            <div class="mb-2"><label>Quota versata (€)</label><input type="number" step="0.01" id="quotaVersata" class="form-control"></div>
+                            <div class="mb-2"><label>Materiale in consegna</label><input type="text" id="materialeConsegna" class="form-control"></div>
+                        </div>
+                        <div id="campiDinamici"></div>
+                        <button type="submit" class="btn btn-primary mt-3">Salva</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modale Aggiungi Campo -->
+    <div class="modal fade" id="campiModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5>Nuovo campo personalizzato</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="nuovoCampoForm"><div class="mb-2"><label>Etichetta</label><input type="text" id="campoEtichetta" class="form-control" required></div><div class="mb-2"><label>Tipo</label><select id="campoTipo" class="form-select"><option value="text">Testo</option><option value="number">Numero</option><option value="date">Data</option></select></div><div class="form-check mb-2"><input type="checkbox" id="campoObbligatorio" class="form-check-input"><label>Obbligatorio</label></div><button type="submit" class="btn btn-primary">Crea campo</button></form></div></div></div></div>
+    
+    <!-- Modale Gestisci Campi -->
+    <div class="modal fade" id="gestisciModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5>Gestisci campi personalizzati</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="gestisciCampiList"></div></div></div></div>
+    
+    <footer>© AKC Como - Gestionale soci</footer>
+</div>
+
+<script type="module">
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdP8gLAxO4XOBcXzNfjvvrCQ2UuQ2oNmQ",
+        authDomain: "gestinale-soci-akc.firebaseapp.com",
+        projectId: "gestinale-soci-akc",
+        storageBucket: "gestinale-soci-akc.firebasestorage.app",
+        messagingSenderId: "165445689065",
+        appId: "1:165445689065:web:db16a8c7df3eb468bcda78"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const sociCol = collection(db, "soci");
+    const campiCol = collection(db, "campiPersonalizzati");
+
+    let campiList = [];
+    let tuttiSoci = [];
+
+    // DOM elements
+    const loginDiv = document.getElementById("loginDiv");
+    const appDiv = document.getElementById("appDiv");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const statusSpan = document.getElementById("statusSpan");
+    const searchInput = document.getElementById("searchInput");
+    const sociTableBody = document.getElementById("sociTableBody");
+    const nuovoSocioBtn = document.getElementById("nuovoSocioBtn");
+    const aggiungiCampoBtn = document.getElementById("aggiungiCampoBtn");
+    const gestisciCampiBtn = document.getElementById("gestisciCampiBtn");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const exportExcelBtn = document.getElementById("exportExcelBtn");
+    const stampaElencoBtn = document.getElementById("stampaElencoBtn");
+    
+    const socioModal = new bootstrap.Modal(document.getElementById("socioModal"));
+    const campiModal = new bootstrap.Modal(document.getElementById("campiModal"));
+    const gestisciModal = new bootstrap.Modal(document.getElementById("gestisciModal"));
+    
+    const socioForm = document.getElementById("socioForm");
+    const socioIdField = document.getElementById("socioId");
+    const campiDinamiciDiv = document.getElementById("campiDinamici");
+    const modalTitle = document.getElementById("modalTitle");
+    const nuovoCampoForm = document.getElementById("nuovoCampoForm");
+    const gestisciCampiList = document.getElementById("gestisciCampiList");
+
+    // Auth
+    loginBtn.onclick = async () => {
+        const email = loginEmail.value.trim();
+        const pwd = loginPassword.value;
+        try {
+            await signInWithEmailAndPassword(auth, email, pwd);
+        } catch (err) {
+            alert("Login fallito: " + err.message);
+        }
+    };
+    
+    logoutBtn.onclick = async () => {
+        await signOut(auth);
+    };
+    
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            loginDiv.style.display = "none";
+            appDiv.style.display = "block";
+            statusSpan.innerText = user.email;
+            await caricaCampi();
+            await caricaSoci();
+        } else {
+            loginDiv.style.display = "block";
+            appDiv.style.display = "none";
+            loginEmail.value = "";
+            loginPassword.value = "";
+        }
+    });
+    
+    // Campi dinamici
+    async function caricaCampi() {
+        const snapshot = await getDocs(campiCol);
+        campiList = [];
+        snapshot.forEach(docSnap => {
+            campiList.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        campiList.sort((a,b) => (a.ordine || 0) - (b.ordine || 0));
+        buildCampiDinamiciForm();
+    }
+    
+    function buildCampiDinamiciForm() {
+        campiDinamiciDiv.innerHTML = "";
+        campiList.forEach(campo => {
+            const div = document.createElement("div");
+            div.className = "mb-2";
+            div.innerHTML = `<label class="form-label">${campo.etichetta}</label><input type="text" class="form-control" id="din_${campo.id}" placeholder="${campo.etichetta}">`;
+            campiDinamiciDiv.appendChild(div);
+        });
+    }
+    
+    // Carica soci e ordine alfabetico client-side
+    async function caricaSoci() {
+        const snapshot = await getDocs(sociCol);
+        tuttiSoci = [];
+        snapshot.forEach(docSnap => {
+            tuttiSoci.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        // Ordinamento per cognome (case-insensitive) e poi per nome
+        tuttiSoci.sort((a, b) => {
+            const cognomeA = (a.cognome || "").toLowerCase();
+            const cognomeB = (b.cognome || "").toLowerCase();
+            if (cognomeA < cognomeB) return -1;
+            if (cognomeA > cognomeB) return 1;
+            const nomeA = (a.nome || "").toLowerCase();
+            const nomeB = (b.nome || "").toLowerCase();
+            return nomeA.localeCompare(nomeB);
+        });
+        filtraERenderizza();
+    }
+    
+    function filtraERenderizza() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        let filtered = tuttiSoci;
+        if (searchTerm) {
+            filtered = tuttiSoci.filter(socio => {
+                const values = Object.values(socio).filter(v => v !== undefined && v !== null);
+                return values.some(val => String(val).toLowerCase().includes(searchTerm));
+            });
+        }
+        renderizzaTabella(filtered);
+    }
+    
+    function renderizzaTabella(sociList) {
+        sociTableBody.innerHTML = "";
+        for (const socio of sociList) {
+            const row = sociTableBody.insertRow();
+            row.insertCell(0).innerHTML = `
+                <button class="btn btn-sm btn-primary" onclick='modificaSocio("${socio.id}")'>Modifica</button>
+                <button class="btn btn-sm btn-danger ms-1" onclick='eliminaSocio("${socio.id}")'>Elimina</button>
+                <button class="btn btn-sm btn-info ms-1" onclick='stampaSingolo("${socio.id}")'>Stampa</button>
+            `;
+            row.insertCell(1).innerText = socio.annoIscrizione || "";
+            row.insertCell(2).innerText = socio.cognome || "";
+            row.insertCell(3).innerText = socio.nome || "";
+            row.insertCell(4).innerText = `${socio.luogoNascita || ""} ${socio.dataNascita ? "("+socio.dataNascita+")" : ""}`;
+            row.insertCell(5).innerText = socio.codiceFiscale || "";
+            row.insertCell(6).innerText = socio.residenza || "";
+            row.insertCell(7).innerText = socio.email || "";
+            row.insertCell(8).innerText = socio.telefono || "";
+            row.insertCell(9).innerText = socio.deposito ? "Sì" : "No";
+            row.insertCell(10).innerText = socio.quotaVersata ? "€"+socio.quotaVersata : "";
+            row.insertCell(11).innerText = socio.materialeConsegna || "";
+            // Campi dinamici
+            campiList.forEach(c => {
+                let val = socio[c.id];
+                if (val === undefined) val = "";
+                row.insertCell(-1).innerText = String(val);
+            });
+        }
+        // Intestazione dinamica
+        const thead = document.getElementById("sociTableHead");
+        if (thead) {
+            let headerRow = thead.querySelector("tr");
+            if (!headerRow) headerRow = thead.insertRow();
+            while (headerRow.cells.length > 12) headerRow.deleteCell(-1);
+            campiList.forEach(c => {
+                const th = document.createElement("th");
+                th.innerText = c.etichetta;
+                headerRow.appendChild(th);
+            });
+        }
+    }
+    
+    window.modificaSocio = async (id) => {
+        const docRef = doc(db, "soci", id);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            const data = snap.data();
+            socioIdField.value = id;
+            document.getElementById("annoIscrizione").value = data.annoIscrizione || "";
+            document.getElementById("cognome").value = data.cognome || "";
+            document.getElementById("nome").value = data.nome || "";
+            document.getElementById("luogoNascita").value = data.luogoNascita || "";
+            document.getElementById("dataNascita").value = data.dataNascita || "";
+            document.getElementById("codiceFiscale").value = data.codiceFiscale || "";
+            document.getElementById("residenza").value = data.residenza || "";
+            document.getElementById("email").value = data.email || "";
+            document.getElementById("telefono").value = data.telefono || "";
+            document.getElementById("deposito").checked = data.deposito || false;
+            document.getElementById("quotaVersata").value = data.quotaVersata || "";
+            document.getElementById("materialeConsegna").value = data.materialeConsegna || "";
+            campiList.forEach(c => {
+                const input = document.getElementById(`din_${c.id}`);
+                if (input) input.value = data[c.id] || "";
+            });
+            modalTitle.innerText = "Modifica Socio";
+            socioModal.show();
+        }
+    };
+    
+    window.eliminaSocio = async (id) => {
+        if (confirm("Eliminare definitivamente il socio?")) {
+            await deleteDoc(doc(db, "soci", id));
+            await caricaSoci();
+        }
+    };
+    
+    window.stampaSingolo = (id) => {
+        const socio = tuttiSoci.find(s => s.id === id);
+        if (!socio) return;
+        const win = window.open();
+        win.document.write(`
+            <html><head><title>Scheda Socio</title>
+            <style>body{font-family:sans-serif;margin:20px;} .card{border:1px solid #ccc;padding:20px;} h2{text-align:center;}</style>
+            </head><body><div class="card">
+            <h2>AKC Como - Scheda Socio</h2>
+            <p><strong>Cognome:</strong> ${socio.cognome || ""}</p>
+            <p><strong>Nome:</strong> ${socio.nome || ""}</p>
+            <p><strong>Anno rinnovo:</strong> ${socio.annoIscrizione || ""}</p>
+            <p><strong>Luogo/Data nascita:</strong> ${socio.luogoNascita || ""} ${socio.dataNascita || ""}</p>
+            <p><strong>Codice fiscale:</strong> ${socio.codiceFiscale || ""}</p>
+            <p><strong>Residenza:</strong> ${socio.residenza || ""}</p>
+            <p><strong>Email:</strong> ${socio.email || ""}</p>
+            <p><strong>Telefono:</strong> ${socio.telefono || ""}</p>
+            <p><strong>Deposito:</strong> ${socio.deposito ? "Sì" : "No"}</p>
+            <p><strong>Quota versata:</strong> €${socio.quotaVersata || 0}</p>
+            <p><strong>Materiale consegnato:</strong> ${socio.materialeConsegna || ""}</p>
+            <h3>Campi aggiuntivi</h3>
+            ${campiList.map(c => `<p><strong>${c.etichetta}:</strong> ${socio[c.id] || ""}</p>`).join("")}
+            </div></body></html>
+        `);
+        win.print();
+    };
+    
+    socioForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const id = socioIdField.value;
+        const dataFissi = {
+            annoIscrizione: parseInt(document.getElementById("annoIscrizione").value) || null,
+            cognome: document.getElementById("cognome").value,
+            nome: document.getElementById("nome").value,
+            luogoNascita: document.getElementById("luogoNascita").value,
+            dataNascita: document.getElementById("dataNascita").value,
+            codiceFiscale: document.getElementById("codiceFiscale").value,
+            residenza: document.getElementById("residenza").value,
+            email: document.getElementById("email").value,
+            telefono: document.getElementById("telefono").value,
+            deposito: document.getElementById("deposito").checked,
+            quotaVersata: parseFloat(document.getElementById("quotaVersata").value) || 0,
+            materialeConsegna: document.getElementById("materialeConsegna").value
+        };
+        const dataDinamici = {};
+        campiList.forEach(c => {
+            const input = document.getElementById(`din_${c.id}`);
+            if (input) dataDinamici[c.id] = input.value;
+        });
+        const fullData = { ...dataFissi, ...dataDinamici };
+        if (id) {
+            await updateDoc(doc(db, "soci", id), fullData);
+        } else {
+            await addDoc(sociCol, fullData);
+        }
+        socioModal.hide();
+        await caricaSoci();
+    };
+    
+    nuovoSocioBtn.onclick = () => {
+        socioForm.reset();
+        socioIdField.value = "";
+        campiList.forEach(c => {
+            const inp = document.getElementById(`din_${c.id}`);
+            if (inp) inp.value = "";
+        });
+        modalTitle.innerText = "Nuovo Socio";
+        socioModal.show();
+    };
+    
+    // Gestione campi personalizzati
+    aggiungiCampoBtn.onclick = () => {
+        document.getElementById("campoEtichetta").value = "";
+        document.getElementById("campoTipo").value = "text";
+        document.getElementById("campoObbligatorio").checked = false;
+        nuovoCampoForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const etichetta = document.getElementById("campoEtichetta").value.trim();
+            const tipo = document.getElementById("campoTipo").value;
+            const obbligatorio = document.getElementById("campoObbligatorio").checked;
+            if (!etichetta) return alert("Inserire etichetta");
+            await addDoc(campiCol, {
+                etichetta,
+                tipo,
+                obbligatorio,
+                ordine: campiList.length + 1
+            });
+            campiModal.hide();
+            await caricaCampi();
+            await caricaSoci();
+        };
+        campiModal.show();
+    };
+    
+    gestisciCampiBtn.onclick = async () => {
+        gestisciCampiList.innerHTML = "";
+        for (const campo of campiList) {
+            const div = document.createElement("div");
+            div.className = "d-flex justify-content-between align-items-center mb-2";
+            div.innerHTML = `<span><strong>${campo.etichetta}</strong> (${campo.tipo})</span><button class="btn btn-sm btn-danger" data-id="${campo.id}">Elimina</button>`;
+            div.querySelector("button").onclick = async () => {
+                if (confirm(`Eliminare il campo "${campo.etichetta}"? Verrà rimosso da tutti i soci.`)) {
+                    await deleteDoc(doc(db, "campiPersonalizzati", campo.id));
+                    await caricaCampi();
+                    await caricaSoci();
+                    gestisciModal.hide();
+                }
+            };
+            gestisciCampiList.appendChild(div);
+        }
+        gestisciModal.show();
+    };
+    
+    // Esportazione
+    function esportaCSV() {
+        if (!tuttiSoci.length) return alert("Nessun dato da esportare");
+        const headers = ["ID","AnnoRinnovo","Cognome","Nome","LuogoNascita","DataNascita","CodiceFiscale","Residenza","Email","Telefono","Deposito","QuotaVersata","MaterialeConsegna", ...campiList.map(c=>c.etichetta)];
+        const rows = tuttiSoci.map(s => [
+            s.id, s.annoIscrizione, s.cognome, s.nome, s.luogoNascita, s.dataNascita, s.codiceFiscale,
+            s.residenza, s.email, s.telefono, s.deposito ? "Sì":"No", s.quotaVersata, s.materialeConsegna,
+            ...campiList.map(c=>s[c.id] || "")
+        ]);
+        let csv = headers.join(",") + "\n";
+        rows.forEach(row => {
+            csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",") + "\n";
+        });
+        const blob = new Blob([csv], {type: "text/csv"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "soci_akc.csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+    
+    function esportaExcel() {
+        const XLSX = window.XLSX;
+        if (!XLSX) return alert("Libreria Excel non caricata.");
+        const headers = ["ID","AnnoRinnovo","Cognome","Nome","LuogoNascita","DataNascita","CodiceFiscale","Residenza","Email","Telefono","Deposito","QuotaVersata","MaterialeConsegna", ...campiList.map(c=>c.etichetta)];
+        const rows = tuttiSoci.map(s => [
+            s.id, s.annoIscrizione, s.cognome, s.nome, s.luogoNascita, s.dataNascita, s.codiceFiscale,
+            s.residenza, s.email, s.telefono, s.deposito ? "Sì":"No", s.quotaVersata, s.materialeConsegna,
+            ...campiList.map(c=>s[c.id] || "")
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Soci");
+        XLSX.writeFile(wb, "soci_akc.xlsx");
+    }
+    
+    exportCsvBtn.onclick = esportaCSV;
+    exportExcelBtn.onclick = esportaExcel;
+    
+    stampaElencoBtn.onclick = () => {
+        const win = window.open();
+        win.document.write(`
+            <html><head><title>Elenco Soci</title>
+            <style>table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:6px;text-align:left;}</style>
+            </head><body><h2>Elenco Soci AKC Como</h2>
+            ${document.querySelector(".table-container").cloneNode(true).outerHTML}
+            </body></html>
+        `);
+        win.print();
+    };
+    
+    searchInput.addEventListener("input", filtraERenderizza);
+</script>
+</body>
+</html>
