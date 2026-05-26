@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AKC Como - Gestionale Soci</title>
+    <!-- Bootstrap 5 + Icone -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SheetJS per Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --primary: #0d6efd;
+            --bg-light: #f8f9fc;
+            --sidebar-bg: #1e2a3a;
+            --sidebar-text: #e2e8f0;
+            --sidebar-hover: #2d3e50;
+            --sidebar-active: #1abc9c;
+        }
+        body {
+            background-color: var(--bg-light);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto;
+        }
+        /* Sidebar stile nuovo */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            padding: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .sidebar .logo-container {
+            text-align: center;
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            border-bottom: 1px solid #3a4a5a;
+            margin-bottom: 1.5rem;
+        }
+        .sidebar .logo {
+            width: 140px;
+            height: auto;
+            border-radius: 12px;
+        }
+        .sidebar .nav-link {
+            color: var(--sidebar-text);
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            margin: 0.2rem 0;
+            border-radius: 0 20px 20px 0;
+            transition: all 0.2s;
+        }
+        .sidebar .nav-link i {
+            width: 24px;
+            margin-right: 12px;
+            font-size: 1.2rem;
+        }
+        .sidebar .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: white;
+        }
+        .sidebar .nav-link:not(.active):hover {
+            background-color: var(--sidebar-hover);
+            color: white;
+        }
+        .sidebar .user-info {
+            margin-top: auto;
+            padding: 1.5rem;
+            border-top: 1px solid #3a4a5a;
+            font-size: 0.85rem;
+        }
+        .sidebar .user-info .btn-outline-danger {
+            color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .sidebar .user-info .btn-outline-danger:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+        /* Filtro anni nella sidebar */
+        .sidebar .filtro-anni {
+            padding: 0 1rem;
+            margin-top: 1rem;
+        }
+        .sidebar .filtro-anni h6 {
+            color: #a0b3c9;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+        }
+        .sidebar .filtro-anni .anno-item {
+            display: block;
+            color: var(--sidebar-text);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+        .sidebar .filtro-anni .anno-item:hover {
+            background-color: var(--sidebar-hover);
+        }
+        .sidebar .filtro-anni .anno-item.active {
+            background-color: var(--sidebar-active);
+            color: white;
+        }
+        /* Contenuto principale */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+        }
+        .card-modern {
+            background: white;
+            border: none;
+            border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .btn-moderno {
+            border-radius: 40px;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.2s;
+                z-index: 1050;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+            .menu-toggle {
+                display: block;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 1060;
+                background: white;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+        }
+        @media (min-width: 769px) {
+            .menu-toggle { display: none; }
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Bottone menu mobile -->
+<button class="btn btn-light menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <div class="logo-container">
+        <img src="logo-AKC.png" alt="AKC Como" class="logo" onerror="this.src='https://via.placeholder.com/140x140?text=AKC'">
+    </div>
+    <nav class="nav flex-column">
+        <a href="#" class="nav-link active" data-section="soci"><i class="bi bi-people"></i> Soci</a>
+        <a href="#" class="nav-link" data-section="campi"><i class="bi bi-files"></i> Campi personalizzati</a>
+        <a href="#" class="nav-link" data-section="esporta"><i class="bi bi-download"></i> Esporta / Stampa</a>
+    </nav>
+    <!-- Filtro anni nella sidebar -->
+    <div class="filtro-anni" id="filtroAnniSidebar">
+        <h6><i class="bi bi-calendar3"></i> Filtra per anno</h6>
+        <div id="anniList"></div>
+    </div>
+    <div class="user-info">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-person-circle fs-5 me-2"></i>
+            <span id="sidebarUserEmail" class="text-truncate"></span>
+        </div>
+        <button id="logoutBtnSidebar" class="btn btn-sm btn-outline-danger w-100 mt-3">Logout</button>
+    </div>
+</div>
+
+<!-- Contenuto principale -->
+<div class="main-content" id="mainContent">
+    <!-- Sezione Soci -->
+    <div id="sociSection">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <h2><i class="bi bi-people"></i> Gestione Soci</h2>
+            <button id="nuovoSocioBtn" class="btn btn-primary btn-moderno"><i class="bi bi-plus-lg"></i> Nuova scheda</button>
+        </div>
+
+        <!-- Ricerca -->
+        <div class="card-modern mb-4">
+            <div class="card-body">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Cerca in tutti i campi...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabella soci -->
+        <div class="card-modern">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="sociTable">
+                        <thead id="sociTableHead">
+                            <tr><th>Azioni</th><th>Anno rinnovo</th><th>Cognome</th><th>Nome</th><th>Luogo/Data nascita</th><th>Codice fiscale</th><th>Residenza</th><th>Email</th><th>Telefono</th><th>Deposito</th><th>Quota versata</th><th>Materiale consegna</th></tr>
+                        </thead>
+                        <tbody id="sociTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sezione Campi personalizzati -->
+    <div id="campiSection" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-files"></i> Campi personalizzati</h2>
+            <button id="aggiungiCampoBtn" class="btn btn-primary btn-moderno"><i class="bi bi-plus-lg"></i> Nuovo campo</button>
+        </div>
+        <div class="card-modern">
+            <div class="card-body" id="gestisciCampiList"></div>
+        </div>
+    </div>
+
+    <!-- Sezione Esporta / Stampa -->
+    <div id="esportaSection" style="display: none;">
+        <h2 class="mb-4"><i class="bi bi-download"></i> Esportazione e stampa</h2>
+        <div class="card-modern">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-3">
+                    <button id="exportCsvBtn" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Esporta CSV</button>
+                    <button id="exportExcelBtn" class="btn btn-outline-success"><i class="bi bi-file-excel"></i> Esporta Excel</button>
+                    <button id="stampaElencoBtn" class="btn btn-outline-dark"><i class="bi bi-printer"></i> Stampa elenco</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale di visualizzazione dettaglio socio (solo lettura + azioni) -->
+<div class="modal fade" id="visualizzaSocioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Scheda Socio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="visualizzaSocioBody">
+                <!-- I campi verranno riempiti dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btnModificaDaVisualizza">Modifica</button>
+                <button type="button" class="btn btn-danger" id="btnEliminaDaVisualizza">Elimina</button>
+                <button type="button" class="btn btn-info" id="btnStampaDaVisualizza">Stampa</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Socio (per modifica/nuovo) - invariata -->
+<div class="modal fade" id="socioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h5 id="modalTitle">Nuovo Socio</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="socioForm">
+                    <input type="hidden" id="socioId">
+                    <div id="campiFissi">
+                        <div class="row">
+                            <div class="col-md-6 mb-2"><label>Anno rinnovo</label><input type="number" id="annoIscrizione" class="form-control"></div>
+                            <div class="col-md-6 mb-2"><label>Cognome *</label><input type="text" id="cognome" class="form-control" required></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-2"><label>Nome *</label><input type="text" id="nome" class="form-control" required></div>
+                            <div class="col-md-6 mb-2"><label>Luogo nascita</label><input type="text" id="luogoNascita" class="form-control"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-2"><label>Data nascita</label><input type="date" id="dataNascita" class="form-control"></div>
+                            <div class="col-md-6 mb-2"><label>Codice fiscale</label><input type="text" id="codiceFiscale" class="form-control"></div>
+                        </div>
+                        <div class="mb-2"><label>Residenza</label><input type="text" id="residenza" class="form-control"></div>
+                        <div class="row">
+                            <div class="col-md-6 mb-2"><label>Email</label><input type="email" id="email" class="form-control"></div>
+                            <div class="col-md-6 mb-2"><label>Telefono</label><input type="text" id="telefono" class="form-control"></div>
+                        </div>
+                        <div class="form-check mb-2"><input type="checkbox" id="deposito" class="form-check-input"><label class="form-check-label">Deposito versato</label></div>
+                        <div class="mb-2"><label>Quota versata (€)</label><input type="number" step="0.01" id="quotaVersata" class="form-control"></div>
+                        <div class="mb-2"><label>Materiale in consegna</label><input type="text" id="materialeConsegna" class="form-control"></div>
+                    </div>
+                    <div id="campiDinamici"></div>
+                    <button type="submit" class="btn btn-primary mt-3">Salva</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Aggiungi Campo -->
+<div class="modal fade" id="campiModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>Nuovo campo personalizzato</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="nuovoCampoForm">
+                    <div class="mb-2"><label>Etichetta</label><input type="text" id="campoEtichetta" class="form-control" required></div>
+                    <div class="mb-2"><label>Tipo</label><select id="campoTipo" class="form-select"><option value="text">Testo</option><option value="number">Numero</option><option value="date">Data</option></select></div>
+                    <div class="form-check mb-2"><input type="checkbox" id="campoObbligatorio" class="form-check-input"><label>Obbligatorio</label></div>
+                    <button type="submit" class="btn btn-primary">Crea campo</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schermata Login -->
+<div id="loginDiv" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#f4f7fc; display:flex; align-items:center; justify-content:center; z-index:2000;">
+    <div class="card" style="width:350px;">
+        <div class="card-body">
+            <h4 class="card-title text-center">Accesso autorizzati</h4>
+            <input type="email" id="loginEmail" class="form-control mb-2" placeholder="Email">
+            <input type="password" id="loginPassword" class="form-control mb-2" placeholder="Password">
+            <button id="loginBtn" class="btn btn-primary w-100">Accedi</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    // ---------------------- CONFIGURAZIONE FIREBASE ----------------------
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdP8gLAxO4XOBcXzNfjvvrCQ2UuQ2oNmQ",
+        authDomain: "gestinale-soci-akc.firebaseapp.com",
+        projectId: "gestinale-soci-akc",
+        storageBucket: "gestinale-soci-akc.firebasestorage.app",
+        messagingSenderId: "165445689065",
+        appId: "1:165445689065:web:db16a8c7df3eb468bcda78"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const sociCol = collection(db, "soci");
+    const campiCol = collection(db, "campiPersonalizzati");
+
+    let campiList = [];
+    let tuttiSoci = [];
+    let currentYearFilter = "all";
+
+    // Elementi DOM
+    const loginDiv = document.getElementById("loginDiv");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtnSidebar = document.getElementById("logoutBtnSidebar");
+    const sidebarUserEmail = document.getElementById("sidebarUserEmail");
+    const mainContent = document.getElementById("mainContent");
+    const sidebar = document.getElementById("sidebar");
+    const sociSection = document.getElementById("sociSection");
+    const campiSection = document.getElementById("campiSection");
+    const esportaSection = document.getElementById("esportaSection");
+    const searchInput = document.getElementById("searchInput");
+    const sociTableBody = document.getElementById("sociTableBody");
+    const sociTableHead = document.getElementById("sociTableHead");
+    const nuovoSocioBtn = document.getElementById("nuovoSocioBtn");
+    const aggiungiCampoBtn = document.getElementById("aggiungiCampoBtn");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const exportExcelBtn = document.getElementById("exportExcelBtn");
+    const stampaElencoBtn = document.getElementById("stampaElencoBtn");
+    const gestisciCampiList = document.getElementById("gestisciCampiList");
+    const visualizzaModal = new bootstrap.Modal(document.getElementById("visualizzaSocioModal"));
+    const socioModal = new bootstrap.Modal(document.getElementById("socioModal"));
+
+    let currentVisualizzaId = null;
+
+    // ---------------------- AUTENTICAZIONE ----------------------
+    loginBtn.onclick = async () => {
+        const email = loginEmail.value.trim();
+        const pwd = loginPassword.value;
+        try {
+            await signInWithEmailAndPassword(auth, email, pwd);
+        } catch (err) {
+            alert("Login fallito: " + err.message);
+        }
+    };
+    logoutBtnSidebar.onclick = async () => { await signOut(auth); };
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            loginDiv.style.display = "none";
+            mainContent.style.display = "block";
+            sidebar.style.display = "flex";
+            sidebarUserEmail.innerText = user.email;
+            await caricaCampi();
+            await caricaSoci();
+        } else {
+            loginDiv.style.display = "flex";
+            mainContent.style.display = "none";
+            sidebar.style.display = "none";
+            loginEmail.value = "";
+            loginPassword.value = "";
+        }
+    });
+
+    // ---------------------- CAMPI DINAMICI ----------------------
+    async function caricaCampi() {
+        const snapshot = await getDocs(campiCol);
+        campiList = [];
+        snapshot.forEach(docSnap => {
+            campiList.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        campiList.sort((a,b) => (a.ordine || 0) - (b.ordine || 0));
+        buildCampiDinamiciForm();
+        if (campiSection.style.display !== "none") await caricaListaCampiPerGestione();
+    }
+
+    function buildCampiDinamiciForm() {
+        const container = document.getElementById("campiDinamici");
+        if (!container) return;
+        container.innerHTML = "";
+        campiList.forEach(campo => {
+            const div = document.createElement("div");
+            div.className = "mb-2";
+            div.innerHTML = `<label class="form-label">${campo.etichetta}</label><input type="text" class="form-control" id="din_${campo.id}" placeholder="${campo.etichetta}">`;
+            container.appendChild(div);
+        });
+    }
+
+    async function caricaListaCampiPerGestione() {
+        if (!gestisciCampiList) return;
+        const snapshot = await getDocs(campiCol);
+        const lista = [];
+        snapshot.forEach(d => lista.push({ id: d.id, ...d.data() }));
+        gestisciCampiList.innerHTML = "";
+        if (lista.length === 0) {
+            gestisciCampiList.innerHTML = "<div class='alert alert-info'>Nessun campo personalizzato. Usa 'Nuovo campo'.</div>";
+            return;
+        }
+        for (const campo of lista) {
+            const div = document.createElement("div");
+            div.className = "d-flex justify-content-between align-items-center border-bottom pb-2 mb-2";
+            div.innerHTML = `<span><strong>${campo.etichetta}</strong> (${campo.tipo})</span>
+                            <button class="btn btn-sm btn-danger elimina-campo" data-id="${campo.id}">Elimina</button>`;
+            gestisciCampiList.appendChild(div);
+        }
+        document.querySelectorAll(".elimina-campo").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                const id = btn.getAttribute("data-id");
+                if (confirm("Eliminare il campo? Verrà rimosso da tutti i soci.")) {
+                    await deleteDoc(doc(db, "campiPersonalizzati", id));
+                    await caricaCampi();
+                    await caricaSoci();
+                    if (campiSection.style.display !== "none") await caricaListaCampiPerGestione();
+                }
+            });
+        });
+    }
+
+    // ---------------------- SOCI ----------------------
+    async function caricaSoci() {
+        const snapshot = await getDocs(sociCol);
+        tuttiSoci = [];
+        snapshot.forEach(docSnap => {
+            tuttiSoci.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        // Ordinamento alfabetico
+        tuttiSoci.sort((a,b) => {
+            const ca = (a.cognome || "").toLowerCase();
+            const cb = (b.cognome || "").toLowerCase();
+            if (ca < cb) return -1;
+            if (ca > cb) return 1;
+            const na = (a.nome || "").toLowerCase();
+            const nb = (b.nome || "").toLowerCase();
+            return na.localeCompare(nb);
+        });
+        aggiornaFiltroAnniSidebar();
+        filtraERenderizza();
+    }
+
+    function aggiornaFiltroAnniSidebar() {
+        const anniSet = new Set();
+        tuttiSoci.forEach(s => { if (s.annoIscrizione) anniSet.add(s.annoIscrizione); });
+        const anniOrdinati = Array.from(anniSet).sort((a,b) => b - a);
+        const container = document.getElementById("anniList");
+        if (!container) return;
+        container.innerHTML = `<a href="#" class="anno-item ${currentYearFilter === "all" ? "active" : ""}" data-year="all">Tutti</a>`;
+        anniOrdinati.forEach(anno => {
+            container.innerHTML += `<a href="#" class="anno-item ${currentYearFilter == anno ? "active" : ""}" data-year="${anno}">${anno}</a>`;
+        });
+        // Aggiungi eventi click
+        document.querySelectorAll(".anno-item").forEach(el => {
+            el.addEventListener("click", (e) => {
+                e.preventDefault();
+                currentYearFilter = el.getAttribute("data-year");
+                aggiornaFiltroAnniSidebar(); // ricarica classe active
+                filtraERenderizza();
+            });
+        });
+    }
+
+    function filtraERenderizza() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        let filtered = tuttiSoci;
+        if (currentYearFilter !== "all") {
+            filtered = filtered.filter(s => s.annoIscrizione == currentYearFilter);
+        }
+        if (searchTerm) {
+            filtered = filtered.filter(socio => {
+                const values = Object.values(socio).filter(v => v !== undefined && v !== null);
+                return values.some(val => String(val).toLowerCase().includes(searchTerm));
+            });
+        }
+        renderizzaTabella(filtered);
+    }
+
+    function renderizzaTabella(sociList) {
+        sociTableBody.innerHTML = "";
+        for (const socio of sociList) {
+            const row = sociTableBody.insertRow();
+            // Colonna Azioni: solo bottone "Apri"
+            row.insertCell(0).innerHTML = `<button class="btn btn-sm btn-outline-primary apri-socio" data-id="${socio.id}"><i class="bi bi-eye"></i> Apri</button>`;
+            row.insertCell(1).innerText = socio.annoIscrizione || "";
+            row.insertCell(2).innerText = socio.cognome || "";
+            row.insertCell(3).innerText = socio.nome || "";
+            row.insertCell(4).innerText = `${socio.luogoNascita || ""} ${socio.dataNascita ? "("+socio.dataNascita+")" : ""}`;
+            row.insertCell(5).innerText = socio.codiceFiscale || "";
+            row.insertCell(6).innerText = socio.residenza || "";
+            row.insertCell(7).innerText = socio.email || "";
+            row.insertCell(8).innerText = socio.telefono || "";
+            row.insertCell(9).innerText = socio.deposito ? "Sì" : "No";
+            row.insertCell(10).innerText = socio.quotaVersata ? "€"+socio.quotaVersata : "";
+            row.insertCell(11).innerText = socio.materialeConsegna || "";
+            campiList.forEach(c => {
+                let val = socio[c.id];
+                if (val === undefined) val = "";
+                row.insertCell(-1).innerText = String(val);
+            });
+        }
+        // Intestazione dinamica campi personalizzati
+        let headerRow = sociTableHead.querySelector("tr");
+        if (!headerRow) headerRow = sociTableHead.insertRow();
+        while (headerRow.cells.length > 12) headerRow.deleteCell(-1);
+        campiList.forEach(c => {
+            const th = document.createElement("th");
+            th.innerText = c.etichetta;
+            headerRow.appendChild(th);
+        });
+
+        // Eventi per i pulsanti "Apri"
+        document.querySelectorAll(".apri-socio").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const id = btn.getAttribute("data-id");
+                apriSchedaVisualizzazione(id);
+            });
+        });
+    }
+
+    // Funzione per aprire la modale di visualizzazione
+    async function apriSchedaVisualizzazione(id) {
+        const socio = tuttiSoci.find(s => s.id === id);
+        if (!socio) return;
+        currentVisualizzaId = id;
+        const container = document.getElementById("visualizzaSocioBody");
+        // Genera HTML di visualizzazione
+        let html = `<div class="row mb-2"><div class="col-md-3 detail-label">Anno rinnovo:</div><div class="col-md-9">${socio.annoIscrizione || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Cognome:</div><div class="col-md-9">${socio.cognome || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Nome:</div><div class="col-md-9">${socio.nome || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Luogo nascita:</div><div class="col-md-9">${socio.luogoNascita || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Data nascita:</div><div class="col-md-9">${socio.dataNascita || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Codice fiscale:</div><div class="col-md-9">${socio.codiceFiscale || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Residenza:</div><div class="col-md-9">${socio.residenza || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Email:</div><div class="col-md-9">${socio.email || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Telefono:</div><div class="col-md-9">${socio.telefono || ""}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Deposito:</div><div class="col-md-9">${socio.deposito ? "Sì" : "No"}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Quota versata:</div><div class="col-md-9">€${socio.quotaVersata || 0}</div></div>`;
+        html += `<div class="row mb-2"><div class="col-md-3 detail-label">Materiale consegnato:</div><div class="col-md-9">${socio.materialeConsegna || ""}</div></div>`;
+        if (campiList.length > 0) {
+            html += `<hr><h6>Campi aggiuntivi</h6>`;
+            campiList.forEach(c => {
+                html += `<div class="row mb-2"><div class="col-md-3 detail-label">${c.etichetta}:</div><div class="col-md-9">${socio[c.id] || ""}</div></div>`;
+            });
+        }
+        container.innerHTML = html;
+        visualizzaModal.show();
+    }
+
+    // Gestione pulsanti nella modale di visualizzazione
+    document.getElementById("btnModificaDaVisualizza").onclick = () => {
+        if (!currentVisualizzaId) return;
+        visualizzaModal.hide();
+        // Apri la modale di modifica con i dati del socio
+        modificaSocio(currentVisualizzaId);
+    };
+    document.getElementById("btnEliminaDaVisualizza").onclick = async () => {
+        if (!currentVisualizzaId) return;
+        if (confirm("Eliminare definitivamente il socio?")) {
+            await deleteDoc(doc(db, "soci", currentVisualizzaId));
+            visualizzaModal.hide();
+            await caricaSoci();
+        }
+    };
+    document.getElementById("btnStampaDaVisualizza").onclick = () => {
+        if (!currentVisualizzaId) return;
+        stampaSingolo(currentVisualizzaId);
+    };
+
+    // Funzione modifica (richiamata anche dalla modale visualizza)
+    async function modificaSocio(id) {
+        const docRef = doc(db, "soci", id);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            const data = snap.data();
+            document.getElementById("socioId").value = id;
+            document.getElementById("annoIscrizione").value = data.annoIscrizione || "";
+            document.getElementById("cognome").value = data.cognome || "";
+            document.getElementById("nome").value = data.nome || "";
+            document.getElementById("luogoNascita").value = data.luogoNascita || "";
+            document.getElementById("dataNascita").value = data.dataNascita || "";
+            document.getElementById("codiceFiscale").value = data.codiceFiscale || "";
+            document.getElementById("residenza").value = data.residenza || "";
+            document.getElementById("email").value = data.email || "";
+            document.getElementById("telefono").value = data.telefono || "";
+            document.getElementById("deposito").checked = data.deposito || false;
+            document.getElementById("quotaVersata").value = data.quotaVersata || "";
+            document.getElementById("materialeConsegna").value = data.materialeConsegna || "";
+            campiList.forEach(c => {
+                const input = document.getElementById(`din_${c.id}`);
+                if (input) input.value = data[c.id] || "";
+            });
+            document.getElementById("modalTitle").innerText = "Modifica Socio";
+            socioModal.show();
+        }
+    }
+
+    // Salvataggio socio (nuovo o modifica)
+    document.getElementById("socioForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("socioId").value;
+        const dataFissi = {
+            annoIscrizione: parseInt(document.getElementById("annoIscrizione").value) || null,
+            cognome: document.getElementById("cognome").value,
+            nome: document.getElementById("nome").value,
+            luogoNascita: document.getElementById("luogoNascita").value,
+            dataNascita: document.getElementById("dataNascita").value,
+            codiceFiscale: document.getElementById("codiceFiscale").value,
+            residenza: document.getElementById("residenza").value,
+            email: document.getElementById("email").value,
+            telefono: document.getElementById("telefono").value,
+            deposito: document.getElementById("deposito").checked,
+            quotaVersata: parseFloat(document.getElementById("quotaVersata").value) || 0,
+            materialeConsegna: document.getElementById("materialeConsegna").value
+        };
+        const dataDinamici = {};
+        campiList.forEach(c => {
+            const input = document.getElementById(`din_${c.id}`);
+            if (input) dataDinamici[c.id] = input.value;
+        });
+        const fullData = { ...dataFissi, ...dataDinamici };
+        if (id) {
+            await updateDoc(doc(db, "soci", id), fullData);
+        } else {
+            await addDoc(sociCol, fullData);
+        }
+        socioModal.hide();
+        await caricaSoci();
+    };
+
+    nuovoSocioBtn.onclick = () => {
+        document.getElementById("socioForm").reset();
+        document.getElementById("socioId").value = "";
+        campiList.forEach(c => {
+            const inp = document.getElementById(`din_${c.id}`);
+            if (inp) inp.value = "";
+        });
+        document.getElementById("modalTitle").innerText = "Nuovo Socio";
+        socioModal.show();
+    };
+
+    window.stampaSingolo = (id) => {
+        const socio = tuttiSoci.find(s => s.id === id);
+        if (!socio) return;
+        const win = window.open();
+        win.document.write(`
+            <html><head><title>Scheda Socio</title>
+            <style>body{font-family:sans-serif;margin:20px;} .card{border:1px solid #ccc;padding:20px;} h2{text-align:center;}</style>
+            </head><body><div class="card">
+            <h2>AKC Como - Scheda Socio</h2>
+            <p><strong>Cognome:</strong> ${socio.cognome || ""}</p>
+            <p><strong>Nome:</strong> ${socio.nome || ""}</p>
+            <p><strong>Anno rinnovo:</strong> ${socio.annoIscrizione || ""}</p>
+            <p><strong>Luogo/Data nascita:</strong> ${socio.luogoNascita || ""} ${socio.dataNascita || ""}</p>
+            <p><strong>Codice fiscale:</strong> ${socio.codiceFiscale || ""}</p>
+            <p><strong>Residenza:</strong> ${socio.residenza || ""}</p>
+            <p><strong>Email:</strong> ${socio.email || ""}</p>
+            <p><strong>Telefono:</strong> ${socio.telefono || ""}</p>
+            <p><strong>Deposito:</strong> ${socio.deposito ? "Sì" : "No"}</p>
+            <p><strong>Quota versata:</strong> €${socio.quotaVersata || 0}</p>
+            <p><strong>Materiale consegnato:</strong> ${socio.materialeConsegna || ""}</p>
+            <h3>Campi aggiuntivi</h3>
+            ${campiList.map(c => `<p><strong>${c.etichetta}:</strong> ${socio[c.id] || ""}</p>`).join("")}
+            </div></body></html>
+        `);
+        win.print();
+    };
+
+    // ---------------------- GESTIONE CAMPI ----------------------
+    aggiungiCampoBtn.onclick = () => {
+        document.getElementById("campoEtichetta").value = "";
+        document.getElementById("campoTipo").value = "text";
+        document.getElementById("campoObbligatorio").checked = false;
+        document.getElementById("nuovoCampoForm").onsubmit = async (e) => {
+            e.preventDefault();
+            const etichetta = document.getElementById("campoEtichetta").value.trim();
+            const tipo = document.getElementById("campoTipo").value;
+            const obbligatorio = document.getElementById("campoObbligatorio").checked;
+            if (!etichetta) return alert("Inserire etichetta");
+            await addDoc(campiCol, { etichetta, tipo, obbligatorio, ordine: campiList.length + 1 });
+            bootstrap.Modal.getInstance(document.getElementById("campiModal")).hide();
+            await caricaCampi();
+            await caricaSoci();
+            if (campiSection.style.display !== "none") await caricaListaCampiPerGestione();
+        };
+        new bootstrap.Modal(document.getElementById("campiModal")).show();
+    };
+
+    // ---------------------- ESPORTAZIONE ----------------------
+    function esportaCSV() {
+        if (!tuttiSoci.length) return alert("Nessun dato da esportare");
+        const headers = ["ID","AnnoRinnovo","Cognome","Nome","LuogoNascita","DataNascita","CodiceFiscale","Residenza","Email","Telefono","Deposito","QuotaVersata","MaterialeConsegna", ...campiList.map(c=>c.etichetta)];
+        const rows = tuttiSoci.map(s => [
+            s.id, s.annoIscrizione, s.cognome, s.nome, s.luogoNascita, s.dataNascita, s.codiceFiscale,
+            s.residenza, s.email, s.telefono, s.deposito ? "Sì":"No", s.quotaVersata, s.materialeConsegna,
+            ...campiList.map(c=>s[c.id] || "")
+        ]);
+        let csv = headers.join(",") + "\n";
+        rows.forEach(row => {
+            csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",") + "\n";
+        });
+        const blob = new Blob([csv], {type: "text/csv"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "soci_akc.csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    function esportaExcel() {
+        const XLSX = window.XLSX;
+        if (!XLSX) return alert("Libreria Excel non caricata.");
+        const headers = ["ID","AnnoRinnovo","Cognome","Nome","LuogoNascita","DataNascita","CodiceFiscale","Residenza","Email","Telefono","Deposito","QuotaVersata","MaterialeConsegna", ...campiList.map(c=>c.etichetta)];
+        const rows = tuttiSoci.map(s => [
+            s.id, s.annoIscrizione, s.cognome, s.nome, s.luogoNascita, s.dataNascita, s.codiceFiscale,
+            s.residenza, s.email, s.telefono, s.deposito ? "Sì":"No", s.quotaVersata, s.materialeConsegna,
+            ...campiList.map(c=>s[c.id] || "")
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Soci");
+        XLSX.writeFile(wb, "soci_akc.xlsx");
+    }
+
+    exportCsvBtn.onclick = esportaCSV;
+    exportExcelBtn.onclick = esportaExcel;
+
+    stampaElencoBtn.onclick = () => {
+        const win = window.open();
+        win.document.write(`
+            <html><head><title>Elenco Soci</title>
+            <style>table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:6px;text-align:left;}</style>
+            </head><body><h2>Elenco Soci AKC Como</h2>
+            ${document.querySelector(".table-responsive").cloneNode(true).outerHTML}
+            </body></html>
+        `);
+        win.print();
+    };
+
+    searchInput.addEventListener("input", filtraERenderizza);
+
+    // ---------------------- MENU LATERALE ----------------------
+    const navLinks = document.querySelectorAll(".sidebar .nav-link");
+    navLinks.forEach(link => {
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            navLinks.forEach(l => l.classList.remove("active"));
+            link.classList.add("active");
+            const section = link.getAttribute("data-section");
+            sociSection.style.display = section === "soci" ? "block" : "none";
+            campiSection.style.display = section === "campi" ? "block" : "none";
+            esportaSection.style.display = section === "esporta" ? "block" : "none";
+            if (section === "campi") caricaListaCampiPerGestione();
+        });
+    });
+
+    // Mobile toggle
+    const menuToggle = document.getElementById("menuToggle");
+    if (menuToggle) {
+        menuToggle.addEventListener("click", () => {
+            sidebar.classList.toggle("open");
+        });
+    }
+    document.addEventListener("click", (e) => {
+        if (window.innerWidth < 769 && sidebar.classList.contains("open") && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            sidebar.classList.remove("open");
+        }
+    });
+</script>
+</body>
+</html>
